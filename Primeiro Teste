@@ -1,0 +1,42 @@
+require(openxlsx)
+require(xts)
+require(aTSA)
+require(timeSeries)
+require(forecast)
+
+path <- 'C://Users//e017298//Documents//Pasta2.xlsx'
+
+series <- openxlsx::read.xlsx(xlsxFile = path,
+                              detectDates = TRUE)
+series <- xts( series [,2], 
+               order.by = series [,1])
+
+plot(series)
+acf(series)
+pacf(series)
+adf.test(series)
+ndiffs(series, test = 'kpss')
+ndiffs(series, test = 'pp')
+
+
+sarima <- estimate((series), p = 1, d = 1, q = 1, PDQ = c(1, 0, 1), S = 12,
+         method = "ML" , intercept = TRUE, output = TRUE)
+
+arch.test(sarima)
+trend.test(as.ts(series))
+
+
+#soma o erro total de um passeio aleatório integrado
+erros_iniciais <- na.omit(diff(series))
+erro_inicial <- sum(erros_iniciais)
+perc_erro_inicial <- mean(erros_iniciais/series[-1])
+R2_erro_inicial <- sum(erro_inicial^2)/sum((series-mean(series))^2)
+
+#compara com o erro do nosso primeiro sarima
+erros_final <- sarima$residuals[-1]
+perc_erro_final <- mean(erros_final/series[-1])
+R2_erro_final <- sum(erros_final^2)/sum((series-mean(series))^2)
+
+model_residuals <- xts(erros_final, order.by = index(erros_iniciais))
+two_errors <- merge.xts(model_residuals,erros_iniciais)
+plot(two_errors)
